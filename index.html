@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automated Tutor-Tutee Matcher</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .hero-section { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); color: white; padding: 60px 0; }
+        .chat-box { height: 320px; overflow-y: auto; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#"><i class="bi bi-person-badge-fill me-2"></i>TutorMatch AI</a>
+            <div class="d-flex align-items-center">
+                <span id="nav-user" class="text-light me-3"></span>
+                <button id="logout-btn" class="btn btn-outline-light btn-sm d-none" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container my-4">
+        
+        <!-- LOGIN / REGISTER SECTION -->
+        <div id="auth-section" class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white text-center fw-bold">Login or Register</div>
+                    <div class="card-body">
+                        <form id="auth-form">
+                            <div class="mb-3">
+                                <label class="form-label">Username</label>
+                                <input type="text" id="auth-username" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" id="auth-password" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Role</label>
+                                <select id="auth-role" class="form-select">
+                                    <option value="tutee">Tutee (Find Tutors)</option>
+                                    <option value="tutor">Tutor (Be a Tutor)</option>
+                                </select>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-primary" onclick="login()">Log In</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="register()">Register Account</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- APP DASHBOARD -->
+        <div id="app-section" class="d-none">
+            
+            <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-home">Homepage</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-criteria">Matching Profile</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-dashboard">Dashboard</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-notifications">Notifications</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-activity">Activity History</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-chat">Chat Box</button></li>
+            </ul>
+
+            <div class="tab-content">
+                
+                <!-- HOMEPAGE -->
+                <div class="tab-pane fade show active" id="tab-home">
+                    
+                    <!-- TUTEE HOMEPAGE VIEW -->
+                    <div id="tutee-home-view">
+                        <div class="p-4 mb-4 rounded-3 hero-section text-center">
+                            <h1 class="display-6 fw-bold">Automated Tutor Matcher</h1>
+                            <p class="lead">Find your optimal tutor based on Subject Expertise, Rate, Schedule, Location, and Modality.</p>
+                            <div id="match-btn-container" class="mt-3">
+                                <button class="btn btn-warning btn-lg fw-bold" onclick="runAutomatedMatch()"><i class="bi bi-cpu me-2"></i>Find Optimal Match Now</button>
+                            </div>
+                        </div>
+
+                        <div id="match-result" class="d-none">
+                            <div class="card border-success shadow">
+                                <div class="card-header bg-success text-white fw-bold">Top Match Result (Hungarian Algorithm)</div>
+                                <div class="card-body">
+                                    <h4 id="match-tutor-name" class="card-title text-primary"></h4>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Subject:</strong> <span id="match-subject"></span></p>
+                                            <p><strong>Hourly Rate:</strong> $<span id="match-rate"></span>/hr</p>
+                                            <p><strong>Schedule:</strong> <span id="match-schedule"></span></p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><strong>Location:</strong> <span id="match-location"></span></p>
+                                            <p><strong>Modality:</strong> <span id="match-modality"></span></p>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-success fw-bold w-100 mt-2" onclick="sendHireRequest()"><i class="bi bi-check-circle-fill me-2"></i>Send Hire Offer</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TUTOR HOMEPAGE VIEW -->
+                    <div id="tutor-home-view" class="d-none">
+                        <h3 class="mb-4"><i class="bi bi-people-fill me-2"></i>Active Engagements</h3>
+                        <div id="tutor-clients-list" class="row"></div>
+                    </div>
+
+                </div>
+
+                <!-- CRITERIA FORM -->
+                <div class="tab-pane fade" id="tab-criteria">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white fw-bold">Configure Matching Criteria</div>
+                        <div class="card-body">
+                            <form id="criteria-form" onsubmit="saveProfile(event)">
+                                <div class="mb-3">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" id="prof-fullname" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Subject Needed / Offered</label>
+                                    <input type="text" id="prof-subject" class="form-control" placeholder="e.g. Mathematics, Python, Physics" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Budget Limit (Tutee) / Hourly Rate (Tutor) ($)</label>
+                                    <input type="number" id="prof-rate" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Schedule Availability</label>
+                                    <select id="prof-schedule" class="form-select">
+                                        <option value="Weekdays">Weekdays</option>
+                                        <option value="Weekends">Weekends</option>
+                                        <option value="Flexible">Flexible</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Location / City</label>
+                                    <input type="text" id="prof-location" class="form-control" placeholder="e.g. Manila, Quezon City, Online" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Teaching Modality</label>
+                                    <select id="prof-modality" class="form-select">
+                                        <option value="Online">Online</option>
+                                        <option value="In-Person">In-Person</option>
+                                        <option value="Both">Both</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Profile Criteria</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DASHBOARD -->
+                <div class="tab-pane fade" id="tab-dashboard">
+                    <h3>Pending Requests & Status</h3>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mt-3">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>User</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- NOTIFICATIONS -->
+                <div class="tab-pane fade" id="tab-notifications">
+                    <h3>Notifications</h3>
+                    <ul class="list-group mt-3" id="notifications-list"></ul>
+                </div>
+
+                <!-- ACTIVITY HISTORY -->
+                <div class="tab-pane fade" id="tab-activity">
+                    <h3>Activity History</h3>
+                    <ul class="list-group mt-3" id="activity-list"></ul>
+                </div>
+
+                <!-- WORKING CHAT BOX -->
+                <div class="tab-pane fade" id="tab-chat">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h5>Matched Contacts</h5>
+                            <div class="list-group" id="chat-contacts"></div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 id="chat-with-header">Chat Window</h5>
+                            <div class="chat-box mb-2" id="chat-messages">
+                                <p class="text-muted text-center mt-5">Select a matched contact to view discussion.</p>
+                            </div>
+                            <div class="input-group">
+                                <input type="text" id="chat-input" class="form-control" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
+                                <button class="btn btn-primary" onclick="sendMessage()"><i class="bi bi-send-fill"></i> Send</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentUserId = null;
+        let currentUserRole = null;
+        let selectedMatchTutorId = null;
+        let selectedMatchScore = null;
+        let activeChatUserId = null;
+
+        document.addEventListener('DOMContentLoaded', checkSession);
+
+        async function checkSession() {
+            const res = await fetch('/api/session');
+            const data = await res.json();
+            if (data.logged_in) {
+                currentUserId = data.user_id;
+                currentUserRole = data.role;
+                document.getElementById('nav-user').innerText = `Logged in: ${data.username} (${data.role})`;
+                document.getElementById('logout-btn').classList.remove('d-none');
+                document.getElementById('auth-section').classList.add('d-none');
+                document.getElementById('app-section').classList.remove('d-none');
+                
+                if (currentUserRole === 'tutor') {
+                    document.getElementById('tutee-home-view').classList.add('d-none');
+                    document.getElementById('tutor-home-view').classList.remove('d-none');
+                    await loadTutorEngagements();
+                } else {
+                    document.getElementById('tutee-home-view').classList.remove('d-none');
+                    document.getElementById('tutor-home-view').classList.add('d-none');
+                }
+
+                await loadProfile();
+                await loadDashboard();
+                await loadNotifications();
+                await loadActivity();
+                await loadContacts();
+            }
+        }
+
+       async function register() {
+    const u = document.getElementById('auth-username').value.trim();
+    const p = document.getElementById('auth-password').value.trim();
+    const r = document.getElementById('auth-role').value;
+
+    if (!u || !p) {
+        alert('Please fill in both username and password.');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: u, password: p, role: r})
+        });
+
+        const data = await res.json();
+        
+        if (res.ok && data.success) {
+            alert(data.message || 'Account registered successfully!');
+            // Automatically log the user in or prompt to log in
+        } else {
+            alert(data.message || 'Registration failed.');
+        }
+    } catch (err) {
+        console.error('Registration error:', err);
+        alert('An unexpected server error occurred. Check browser console.');
+    }
+}
+
+        async function login() {
+            const u = document.getElementById('auth-username').value;
+            const p = document.getElementById('auth-password').value;
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: u, password: p})
+            });
+            const data = await res.json();
+            if (data.success) {
+                checkSession();
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/logout', {method: 'POST'});
+            window.location.reload();
+        }
+
+        async function loadProfile() {
+            const res = await fetch('/api/profile');
+            const p = await res.json();
+            if (p.full_name) {
+                document.getElementById('prof-fullname').value = p.full_name;
+                document.getElementById('prof-subject').value = p.subject;
+                document.getElementById('prof-rate').value = p.budget_or_rate;
+                document.getElementById('prof-schedule').value = p.schedule;
+                document.getElementById('prof-location').value = p.location;
+                document.getElementById('prof-modality').value = p.modality;
+            }
+        }
+
+        async function saveProfile(e) {
+            e.preventDefault();
+            const body = {
+                full_name: document.getElementById('prof-fullname').value,
+                subject: document.getElementById('prof-subject').value,
+                budget_or_rate: document.getElementById('prof-rate').value,
+                schedule: document.getElementById('prof-schedule').value,
+                location: document.getElementById('prof-location').value,
+                modality: document.getElementById('prof-modality').value
+            };
+            const res = await fetch('/api/profile', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            alert(data.message);
+            loadActivity();
+        }
+
+        async function runAutomatedMatch() {
+            const res = await fetch('/api/match');
+            const data = await res.json();
+            if (!data.success) {
+                alert(data.message);
+                return;
+            }
+
+            const t = data.tutor;
+            selectedMatchTutorId = t.user_id;
+            selectedMatchScore = data.compatibility;
+
+            document.getElementById('match-tutor-name').innerText = t.full_name + ` (@${t.username})`;
+            document.getElementById('match-subject').innerText = t.subject;
+            document.getElementById('match-rate').innerText = t.rate;
+            document.getElementById('match-schedule').innerText = t.schedule;
+            document.getElementById('match-location').innerText = t.location;
+            document.getElementById('match-modality').innerText = t.modality;
+
+            document.getElementById('match-result').classList.remove('d-none');
+        }
+
+        async function sendHireRequest() {
+            const res = await fetch('/api/hire', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({tutor_id: selectedMatchTutorId, score: selectedMatchScore})
+            });
+            const data = await res.json();
+            alert(data.message);
+            document.getElementById('match-result').classList.add('d-none');
+            await loadDashboard();
+            await loadActivity();
+        }
+
+        async function loadTutorEngagements() {
+            const res = await fetch('/api/tutor/engagements?t=' + Date.now());
+            const data = await res.json();
+            const container = document.getElementById('tutor-clients-list');
+            
+            if (data.length === 0) {
+                container.innerHTML = '<div class="col-12"><p class="text-muted">No active accepted engagements at this moment.</p></div>';
+                return;
+            }
+
+            container.innerHTML = data.map(client => `
+                <div class="col-md-6 mb-3">
+                    <div class="card border-primary shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">${client.full_name || client.tutee_name} (@${client.tutee_name})</h5>
+                            <p class="card-text mb-1"><strong>Subject:</strong> ${client.subject || 'N/A'}</p>
+                            <p class="card-text mb-1"><strong>Schedule:</strong> ${client.schedule || 'N/A'}</p>
+                            <p class="card-text mb-1"><strong>Modality:</strong> ${client.modality || 'N/A'}</p>
+                            <p class="card-text mb-3"><strong>Location:</strong> ${client.location || 'N/A'}</p>
+                            <span class="badge bg-success mb-3">Ongoing</span>
+                            <button class="btn btn-outline-danger btn-sm d-block w-100" onclick="terminateEngagement(${client.request_id})">
+                                <i class="bi bi-x-circle me-1"></i> Terminate Engagement
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function terminateEngagement(requestId) {
+            if (!confirm('Are you sure you want to terminate this engagement?')) return;
+            
+            const res = await fetch('/api/tutor/terminate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({request_id: requestId})
+            });
+            const data = await res.json();
+            alert(data.message);
+            
+            // Explicitly await every reload to guarantee full UI refresh
+            await loadTutorEngagements();
+            await loadDashboard();
+            await loadContacts();
+            await loadActivity();
+            
+            document.getElementById('chat-messages').innerHTML = '<p class="text-muted text-center mt-5">Select a matched contact to view discussion.</p>';
+            document.getElementById('chat-with-header').innerText = 'Chat Window';
+            activeChatUserId = null;
+        }
+
+        async function loadDashboard() {
+            const res = await fetch('/api/dashboard?t=' + Date.now());
+            const requests = await res.json();
+            const tbody = document.getElementById('dashboard-rows');
+            tbody.innerHTML = '';
+
+            requests.forEach(r => {
+                const partner = currentUserRole === 'tutor' ? r.tutee_name : r.tutor_name;
+                let badgeClass = 'warning';
+                if (r.status === 'accepted') badgeClass = 'success';
+                else if (r.status === 'declined' || r.status === 'terminated') badgeClass = 'danger';
+
+                let statusBadge = `<span class="badge bg-${badgeClass}">${r.status}</span>`;
+                let actionBtn = `<span class="text-muted">None</span>`;
+
+                // Restored Accept / Decline buttons for tutors on pending requests
+                if (currentUserRole === 'tutor' && r.status === 'pending') {
+                    actionBtn = `
+                        <button class="btn btn-sm btn-success me-1" onclick="respondHire(${r.id}, 'accepted')">Accept</button>
+                        <button class="btn btn-sm btn-danger" onclick="respondHire(${r.id}, 'declined')">Decline</button>
+                    `;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${partner}</td>
+                        <td>${r.subject || 'N/A'}</td>
+                        <td>${statusBadge}</td>
+                        <td>${actionBtn}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function respondHire(reqId, status) {
+            await fetch('/api/hire/respond', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({request_id: reqId, status: status})
+            });
+            await loadDashboard();
+            await loadActivity();
+            await loadContacts();
+            if (currentUserRole === 'tutor') {
+                await loadTutorEngagements();
+            }
+        }
+
+        async function loadNotifications() {
+            const res = await fetch('/api/notifications');
+            const data = await res.json();
+            const list = document.getElementById('notifications-list');
+            list.innerHTML = data.map(n => `<li class="list-group-item"><i class="bi bi-bell-fill text-warning me-2"></i>${n.message} <small class="text-muted float-end">${n.created_at}</small></li>`).join('');
+        }
+
+        async function loadActivity() {
+            const res = await fetch('/api/activity');
+            const data = await res.json();
+            const list = document.getElementById('activity-list');
+            list.innerHTML = data.map(a => `<li class="list-group-item"><i class="bi bi-clock-history me-2"></i>${a.action} <small class="text-muted float-end">${a.timestamp}</small></li>`).join('');
+        }
+
+        async function loadContacts() {
+            const res = await fetch('/api/chat/contacts?t=' + Date.now());
+            const contacts = await res.json();
+            const container = document.getElementById('chat-contacts');
+            
+            if (contacts.length === 0) {
+                container.innerHTML = '<p class="text-muted small p-2">No active matched contacts available.</p>';
+                return;
+            }
+            
+            container.innerHTML = contacts.map(c => `
+                <button class="list-group-item list-group-item-action ${activeChatUserId === c.id ? 'active' : ''}" onclick="openChat(${c.id}, '${c.username}')">
+                    ${c.username} <span class="badge bg-secondary float-end">${c.role}</span>
+                </button>
+            `).join('');
+        }
+
+        function openChat(userId, username) {
+            activeChatUserId = userId;
+            document.getElementById('chat-with-header').innerText = `Chat with ${username}`;
+            loadContacts();
+            fetchMessages();
+        }
+
+        async function fetchMessages() {
+            if (!activeChatUserId) return;
+            const res = await fetch(`/api/messages?other_id=${activeChatUserId}&t=` + Date.now());
+            const msgs = await res.json();
+            const box = document.getElementById('chat-messages');
+            
+            if (msgs.length === 0) {
+                box.innerHTML = '<p class="text-muted text-center mt-5">No previous messages yet. Say hi!</p>';
+                return;
+            }
+
+            box.innerHTML = msgs.map(m => `
+                <div class="mb-2 ${m.sender_id === currentUserId ? 'text-end' : 'text-start'}">
+                    <span class="d-inline-block p-2 rounded ${m.sender_id === currentUserId ? 'bg-primary text-white' : 'bg-light border'}">
+                        <strong>${m.sender_name}:</strong> ${m.message}
+                    </span>
+                </div>
+            `).join('');
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const msgInput = document.getElementById('chat-input');
+            const text = msgInput.value.trim();
+    
+    if (!text) return;
+    if (!activeChatUserId) {
+        alert('Please select a contact from the list first.');
+        return;
+    }
+
+    const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            receiver_id: parseInt(activeChatUserId), // Ensure integer type
+            message: text
+        })
+    });
+    
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+        alert(data.error || 'Failed to send message.');
+        return;
+    }
+
+    msgInput.value = '';
+    await fetchMessages();
+}
+    </script>
+</body>
+</html>
