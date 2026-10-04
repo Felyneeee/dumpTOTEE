@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Automated Tutor-Tutee Matcher</title>
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -14,7 +13,7 @@
 </head>
 <body>
 
-    <!-- Navigation Bar -->
+    <!-- Nav Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand fw-bold" href="#"><i class="bi bi-person-badge-fill me-2"></i>TutorMatch AI</a>
@@ -28,7 +27,7 @@
     <!-- Main Container -->
     <div class="container my-4">
         
-        <!-- LOGIN / REGISTER SECTION -->
+        <!-- LOGIN / REGISTER -->
         <div id="auth-section" class="row justify-content-center">
             <div class="col-md-5">
                 <div class="card shadow-sm">
@@ -77,47 +76,31 @@
                 <!-- HOMEPAGE -->
                 <div class="tab-pane fade show active" id="tab-home">
                     
-                    <!-- TUTEE HOMEPAGE VIEW -->
                     <div id="tutee-home-view">
                         <div class="p-4 mb-4 rounded-3 hero-section text-center">
-                            <h1 class="display-6 fw-bold">Automated Tutor Matcher</h1>
-                            <p class="lead">Find your optimal tutor based on Subject Expertise, Rate, Schedule, Location, and Modality.</p>
-                            <div id="match-btn-container" class="mt-3">
-                                <button class="btn btn-warning btn-lg fw-bold" onclick="runAutomatedMatch()"><i class="bi bi-cpu me-2"></i>Find Optimal Match Now</button>
-                            </div>
+                            <h1 class="display-6 fw-bold">Find a Tutor Instantly</h1>
+                            <p class="lead">One click matches you with the most compatible available tutor. They accept or decline when they log in.</p>
+                            <button id="find-tutor-btn" class="btn btn-warning btn-lg fw-bold" onclick="findTutor()"><i class="bi bi-lightning-charge-fill me-2"></i>Find My Tutor</button>
                         </div>
-
-                        <div id="match-result" class="d-none">
-                            <div class="card border-success shadow">
-                                <div class="card-header bg-success text-white fw-bold">Top Match Result (Hungarian Algorithm)</div>
-                                <div class="card-body">
-                                    <h4 id="match-tutor-name" class="card-title text-primary"></h4>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <p><strong>Subject:</strong> <span id="match-subject"></span></p>
-                                            <p><strong>Hourly Rate:</strong> $<span id="match-rate"></span>/hr</p>
-                                            <p><strong>Schedule:</strong> <span id="match-schedule"></span></p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <p><strong>Location:</strong> <span id="match-location"></span></p>
-                                            <p><strong>Modality:</strong> <span id="match-modality"></span></p>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-success fw-bold w-100 mt-2" onclick="sendHireRequest()"><i class="bi bi-check-circle-fill me-2"></i>Send Hire Offer</button>
-                                </div>
-                            </div>
-                        </div>
+                        <div id="tutee-current"></div>
+                        <h4 class="mt-4"><i class="bi bi-check2-all me-2"></i>Finished Sessions</h4>
+                        <div id="tutee-finished" class="row"></div>
                     </div>
 
-                    <!-- TUTOR HOMEPAGE VIEW -->
                     <div id="tutor-home-view" class="d-none">
-                        <h3 class="mb-4"><i class="bi bi-people-fill me-2"></i>Active Engagements</h3>
+                        <div id="tutor-offers-wrap" class="d-none mb-4">
+                            <h3 class="mb-3"><i class="bi bi-envelope-paper-fill me-2"></i>New Offers</h3>
+                            <div id="tutor-offers" class="row"></div>
+                        </div>
+                        <h3 class="mb-3"><i class="bi bi-people-fill me-2"></i>Active Engagements</h3>
                         <div id="tutor-clients-list" class="row"></div>
+                        <h3 class="mt-4 mb-3"><i class="bi bi-check2-all me-2"></i>Finished Sessions</h3>
+                        <div id="tutor-finished" class="row"></div>
                     </div>
 
                 </div>
 
-                <!-- CRITERIA FORM -->
+                <!-- PROFILE FORM -->
                 <div class="tab-pane fade" id="tab-criteria">
                     <div class="card">
                         <div class="card-header bg-secondary text-white fw-bold">Configure Matching Criteria</div>
@@ -144,8 +127,8 @@
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                <label class="form-label">Location / City (Cavite)</label>
-                                <select id="prof-location" class="form-select" required>
+                                    <label class="form-label">Location / City (Cavite)</label>
+                                    <select id="prof-location" class="form-select" required>
                                         <option value="">Select Cavite City/Municipality</option>
                                         <option value="Bacoor">Bacoor</option>
                                         <option value="Cavite City">Cavite City</option>
@@ -168,8 +151,8 @@
                                         <option value="Silang">Silang</option>
                                         <option value="Tanza">Tanza</option>
                                         <option value="Ternate">Ternate</option>
-                                </select>
-                            </div>
+                                    </select>
+                                </div>
                                 <div class="mb-3">
                                     <label class="form-label">Teaching Modality</label>
                                     <select id="prof-modality" class="form-select">
@@ -186,7 +169,7 @@
 
                 <!-- DASHBOARD -->
                 <div class="tab-pane fade" id="tab-dashboard">
-                    <h3>Pending Requests & Status</h3>
+                    <h3>Requests &amp; Sessions</h3>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover mt-3">
                             <thead class="table-dark">
@@ -214,22 +197,23 @@
                     <ul class="list-group mt-3" id="activity-list"></ul>
                 </div>
 
-                <!-- WORKING CHAT BOX -->
+                <!-- CHAT BOX -->
                 <div class="tab-pane fade" id="tab-chat">
                     <div class="row">
                         <div class="col-md-4">
-                            <h5>Matched Contacts</h5>
+                            <h5>Sessions</h5>
                             <div class="list-group" id="chat-contacts"></div>
                         </div>
                         <div class="col-md-8">
                             <h5 id="chat-with-header">Chat Window</h5>
                             <div class="chat-box mb-2" id="chat-messages">
-                                <p class="text-muted text-center mt-5">Select a matched contact to view discussion.</p>
+                                <p class="text-muted text-center mt-5">Select a session to view the conversation.</p>
                             </div>
                             <div class="input-group">
                                 <input type="text" id="chat-input" class="form-control" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
-                                <button class="btn btn-primary" onclick="sendMessage()"><i class="bi bi-send-fill"></i> Send</button>
+                                <button class="btn btn-primary" id="chat-send-btn" onclick="sendMessage()"><i class="bi bi-send-fill"></i> Send</button>
                             </div>
+                            <small id="chat-warning" class="text-secondary d-none mt-1 d-block"><i class="bi bi-check2-all me-1"></i>This session is DONE. The chat is kept for reference and is read-only.</small>
                         </div>
                     </div>
                 </div>
@@ -239,351 +223,349 @@
 
     </div>
 
-    <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentUserId = null;
         let currentUserRole = null;
-        let selectedMatchTutorId = null;
-        let selectedMatchScore = null;
-        let activeChatUserId = null;
+        let activeChat = null;          // {requestId, username}
+        let pollHandle = null;
+
+        const esc = s => String(s ?? '').replace(/[&<>"']/g,
+            c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+        const $ = id => document.getElementById(id);
+
+        async function api(url, method = 'GET', body = null) {
+            const opts = {method, headers: {'Content-Type': 'application/json'}};
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(url + (method === 'GET' ? (url.includes('?') ? '&' : '?') + 't=' + Date.now() : ''), opts);
+            return res.json().catch(() => ({}));
+        }
 
         document.addEventListener('DOMContentLoaded', checkSession);
 
         async function checkSession() {
-            const res = await fetch('/api/session');
-            const data = await res.json();
-            if (data.logged_in) {
-                currentUserId = data.user_id;
-                currentUserRole = data.role;
-                document.getElementById('nav-user').innerText = `Logged in: ${data.username} (${data.role})`;
-                document.getElementById('logout-btn').classList.remove('d-none');
-                document.getElementById('auth-section').classList.add('d-none');
-                document.getElementById('app-section').classList.remove('d-none');
-                
-                if (currentUserRole === 'tutor') {
-                    document.getElementById('tutee-home-view').classList.add('d-none');
-                    document.getElementById('tutor-home-view').classList.remove('d-none');
-                    await loadTutorEngagements();
-                } else {
-                    document.getElementById('tutee-home-view').classList.remove('d-none');
-                    document.getElementById('tutor-home-view').classList.add('d-none');
-                }
+            const data = await api('/api/session');
+            if (!data.logged_in) return;
+            currentUserId = data.user_id;
+            currentUserRole = data.role;
+            $('nav-user').innerText = `Logged in: ${data.username} (${data.role})`;
+            $('logout-btn').classList.remove('d-none');
+            $('auth-section').classList.add('d-none');
+            $('app-section').classList.remove('d-none');
+            $('tutee-home-view').classList.toggle('d-none', currentUserRole === 'tutor');
+            $('tutor-home-view').classList.toggle('d-none', currentUserRole !== 'tutor');
 
-                await loadProfile();
-                await loadDashboard();
-                await loadNotifications();
-                await loadActivity();
-                await loadContacts();
-            }
+            await loadProfile();
+            await refreshAll();
+            if (!pollHandle) pollHandle = setInterval(refreshAll, 10000);   // keeps offers / confirmations live
         }
 
-       async function register() {
-    const u = document.getElementById('auth-username').value.trim();
-    const p = document.getElementById('auth-password').value.trim();
-    const r = document.getElementById('auth-role').value;
-
-    if (!u || !p) {
-        alert('Please fill in both username and password.');
-        return;
-    }
-
-    try {
-        const res = await fetch('/api/register', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username: u, password: p, role: r})
-        });
-
-        const data = await res.json();
-        
-        if (res.ok && data.success) {
-            alert(data.message || 'Account registered successfully!');
-            // Automatically log the user in or prompt to log in
-        } else {
-            alert(data.message || 'Registration failed.');
+        async function refreshAll() {
+            if (!currentUserId) return;
+            await Promise.all([
+                currentUserRole === 'tutor' ? loadTutorHome() : loadTuteeHome(),
+                loadDashboard(), loadNotifications(), loadActivity(), loadContacts(),
+                activeChat ? fetchMessages() : null,
+            ]);
         }
-    } catch (err) {
-        console.error('Registration error:', err);
-        alert('An unexpected server error occurred. Check browser console.');
-    }
-}
+
+        // ---------------------------------------------------------------- auth
+        async function register() {
+            const u = $('auth-username').value.trim();
+            const p = $('auth-password').value.trim();
+            if (!u || !p) { alert('Please fill in both username and password.'); return; }
+            const data = await api('/api/register', 'POST', {username: u, password: p, role: $('auth-role').value});
+            alert(data.message);
+        }
 
         async function login() {
-            const u = document.getElementById('auth-username').value;
-            const p = document.getElementById('auth-password').value;
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({username: u, password: p})
-            });
-            const data = await res.json();
-            if (data.success) {
-                checkSession();
-            } else {
-                alert(data.message);
-            }
+            const data = await api('/api/login', 'POST',
+                {username: $('auth-username').value, password: $('auth-password').value});
+            if (data.success) checkSession(); else alert(data.message);
         }
 
         async function logout() {
-            await fetch('/api/logout', {method: 'POST'});
+            await api('/api/logout', 'POST');
             window.location.reload();
         }
 
+        // ---------------------------------------------------------------- profile
         async function loadProfile() {
-            const res = await fetch('/api/profile');
-            const p = await res.json();
-            if (p.full_name) {
-                document.getElementById('prof-fullname').value = p.full_name;
-                document.getElementById('prof-subject').value = p.subject;
-                document.getElementById('prof-rate').value = p.budget_or_rate;
-                document.getElementById('prof-schedule').value = p.schedule;
-                document.getElementById('prof-location').value = p.location;
-                document.getElementById('prof-modality').value = p.modality;
-            }
+            const p = await api('/api/profile');
+            if (!p.full_name) return;
+            $('prof-fullname').value = p.full_name;
+            $('prof-subject').value = p.subject;
+            $('prof-rate').value = p.budget_or_rate;
+            $('prof-schedule').value = p.schedule;
+            $('prof-location').value = p.location;
+            $('prof-modality').value = p.modality;
         }
 
         async function saveProfile(e) {
             e.preventDefault();
-            const body = {
-                full_name: document.getElementById('prof-fullname').value,
-                subject: document.getElementById('prof-subject').value,
-                budget_or_rate: document.getElementById('prof-rate').value,
-                schedule: document.getElementById('prof-schedule').value,
-                location: document.getElementById('prof-location').value,
-                modality: document.getElementById('prof-modality').value
-            };
-            const res = await fetch('/api/profile', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(body)
+            const data = await api('/api/profile', 'POST', {
+                full_name: $('prof-fullname').value, subject: $('prof-subject').value,
+                budget_or_rate: $('prof-rate').value, schedule: $('prof-schedule').value,
+                location: $('prof-location').value, modality: $('prof-modality').value
             });
-            const data = await res.json();
             alert(data.message);
             loadActivity();
         }
 
-        async function runAutomatedMatch() {
-            const res = await fetch('/api/match');
-            const data = await res.json();
-            if (!data.success) {
-                alert(data.message);
-                return;
-            }
-
-            const t = data.tutor;
-            selectedMatchTutorId = t.user_id;
-            selectedMatchScore = data.compatibility;
-
-            document.getElementById('match-tutor-name').innerText = t.full_name + ` (@${t.username})`;
-            document.getElementById('match-subject').innerText = t.subject;
-            document.getElementById('match-rate').innerText = t.rate;
-            document.getElementById('match-schedule').innerText = t.schedule;
-            document.getElementById('match-location').innerText = t.location;
-            document.getElementById('match-modality').innerText = t.modality;
-
-            document.getElementById('match-result').classList.remove('d-none');
+        // ---------------------------------------------------------------- shared UI pieces
+        const STATUS = {
+            pending: ['warning text-dark', 'Pending'],
+            accepted: ['success', 'Ongoing'],
+            termination_pending: ['warning text-dark', 'Termination requested'],
+            completed: ['dark', 'DONE'],
+            declined: ['danger', 'Declined'],
+            expired: ['secondary', 'Expired'],
+            cancelled: ['secondary', 'Cancelled'],
+        };
+        function badge(status) {
+            const [cls, label] = STATUS[status] || ['secondary', status];
+            const icon = status === 'completed' ? '<i class="bi bi-check2-all me-1"></i>' : '';
+            return `<span class="badge bg-${cls}">${icon}${label}</span>`;
         }
 
-        async function sendHireRequest() {
-            const res = await fetch('/api/hire', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({tutor_id: selectedMatchTutorId, score: selectedMatchScore})
-            });
-            const data = await res.json();
-            alert(data.message);
-            document.getElementById('match-result').classList.add('d-none');
-            await loadDashboard();
-            await loadActivity();
+        // Termination controls depend on who asked, so both sides see the right buttons.
+        function terminationControls(r) {
+            if (r.status === 'accepted') {
+                return `<button class="btn btn-outline-danger btn-sm" onclick="terminate(${r.id}, 'request')">
+                            <i class="bi bi-x-circle me-1"></i>Request termination</button>`;
+            }
+            if (r.status === 'termination_pending') {
+                if (r.terminate_requested_by === currentUserId) {
+                    return `<span class="text-muted small me-2">Waiting for the other party to confirm</span>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="terminate(${r.id}, 'cancel')">Withdraw</button>`;
+                }
+                return `<div class="small text-danger mb-1">The other party wants to end this session.</div>
+                        <button class="btn btn-danger btn-sm me-1" onclick="terminate(${r.id}, 'confirm')">Confirm termination</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="terminate(${r.id}, 'reject')">Keep session</button>`;
+            }
+            return '';
         }
 
-        async function loadTutorEngagements() {
-            const res = await fetch('/api/tutor/engagements?t=' + Date.now());
-            const data = await res.json();
-            const container = document.getElementById('tutor-clients-list');
-            
-            if (data.length === 0) {
-                container.innerHTML = '<div class="col-12"><p class="text-muted">No active accepted engagements at this moment.</p></div>';
-                return;
-            }
+        function chatButton(r, name, label = 'Open chat') {
+            return `<button class="btn btn-primary btn-sm me-1" data-name="${esc(name)}"
+                        onclick="openChatTab(${r.id}, this.dataset.name)"><i class="bi bi-chat-dots me-1"></i>${label}</button>`;
+        }
 
-            container.innerHTML = data.map(client => `
-                <div class="col-md-6 mb-3">
-                    <div class="card border-primary shadow-sm">
+        function detailLines(d) {
+            return `<p class="card-text mb-1"><strong>Subject:</strong> ${esc(d.subject || 'N/A')}</p>
+                    <p class="card-text mb-1"><strong>Schedule:</strong> ${esc(d.schedule || 'N/A')}</p>
+                    <p class="card-text mb-1"><strong>Modality:</strong> ${esc(d.modality || 'N/A')}</p>
+                    <p class="card-text mb-2"><strong>Location:</strong> ${esc(d.location || 'N/A')}</p>`;
+        }
+
+        const fmtScore = s => (Math.round(s * 10) / 10) + '% compatible';
+
+        // ---------------------------------------------------------------- tutee home
+        async function findTutor() {
+            const btn = $('find-tutor-btn');
+            btn.disabled = true;
+            const data = await api('/api/match', 'POST');
+            alert(data.message || data.error);
+            await refreshAll();
+        }
+
+        async function cancelRequest() {
+            if (!confirm('Cancel this request?')) return;
+            const data = await api('/api/match/cancel', 'POST');
+            alert(data.message || data.error);
+            await refreshAll();
+        }
+
+        async function loadTuteeHome() {
+            const data = await api('/api/match/status');
+            const cur = data.current;
+            $('find-tutor-btn').disabled = !!cur;
+
+            if (!cur) {
+                $('tutee-current').innerHTML = '';
+            } else {
+                const name = `${esc(cur.tutor_full_name || cur.tutor_name)} (@${esc(cur.tutor_name)})`;
+                const waiting = cur.status === 'pending';
+                $('tutee-current').innerHTML = `
+                    <div class="card ${waiting ? 'border-warning' : 'border-success'} shadow-sm">
+                        <div class="card-header ${waiting ? 'bg-warning' : 'bg-success text-white'} fw-bold">
+                            ${waiting ? 'Offer sent - waiting for your tutor to respond' : 'Your current tutor'}
+                        </div>
                         <div class="card-body">
-                            <h5 class="card-title text-primary">${client.full_name || client.tutee_name} (@${client.tutee_name})</h5>
-                            <p class="card-text mb-1"><strong>Subject:</strong> ${client.subject || 'N/A'}</p>
-                            <p class="card-text mb-1"><strong>Schedule:</strong> ${client.schedule || 'N/A'}</p>
-                            <p class="card-text mb-1"><strong>Modality:</strong> ${client.modality || 'N/A'}</p>
-                            <p class="card-text mb-3"><strong>Location:</strong> ${client.location || 'N/A'}</p>
-                            <span class="badge bg-success mb-3">Ongoing</span>
-                            <button class="btn btn-outline-danger btn-sm d-block w-100" onclick="terminateEngagement(${client.request_id})">
-                                <i class="bi bi-x-circle me-1"></i> Terminate Engagement
-                            </button>
+                            <h4 class="card-title text-primary">${name} ${badge(cur.status)}</h4>
+                            <p class="text-muted small">${fmtScore(cur.match_score)}${waiting ? ' &middot; the offer moves to the next tutor if unanswered in 24h' : ''}</p>
+                            ${detailLines(cur)}
+                            <p class="card-text mb-3"><strong>Rate:</strong> $${esc(cur.rate)}/hr</p>
+                            ${waiting
+                                ? `<button class="btn btn-outline-secondary btn-sm" onclick="cancelRequest()">Cancel request</button>`
+                                : chatButton(cur, cur.tutor_name) + terminationControls(cur)}
+                        </div>
+                    </div>`;
+            }
+
+            $('tutee-finished').innerHTML = data.finished.length ? data.finished.map(r => `
+                <div class="col-md-6 mb-3">
+                    <div class="card border-secondary shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">${esc(r.tutor_full_name || r.tutor_name)} (@${esc(r.tutor_name)}) ${badge('completed')}</h5>
+                            <p class="card-text mb-1"><strong>Subject:</strong> ${esc(r.subject || 'N/A')}</p>
+                            <p class="text-muted small mb-2">Finished ${esc(r.completed_at || '')}</p>
+                            ${chatButton(r, r.tutor_name, 'View chat history')}
                         </div>
                     </div>
-                </div>
-            `).join('');
+                </div>`).join('')
+                : '<div class="col-12"><p class="text-muted">No finished sessions yet.</p></div>';
         }
 
-        async function terminateEngagement(requestId) {
-            if (!confirm('Are you sure you want to terminate this engagement?')) return;
-            
-            const res = await fetch('/api/tutor/terminate', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({request_id: requestId})
-            });
-            const data = await res.json();
-            alert(data.message);
-            
-            // Explicitly await every reload to guarantee full UI refresh
-            await loadTutorEngagements();
-            await loadDashboard();
-            await loadContacts();
-            await loadActivity();
-            
-            document.getElementById('chat-messages').innerHTML = '<p class="text-muted text-center mt-5">Select a matched contact to view discussion.</p>';
-            document.getElementById('chat-with-header').innerText = 'Chat Window';
-            activeChatUserId = null;
+        // ---------------------------------------------------------------- tutor home
+        function tutorCard(c, body, border = 'primary') {
+            return `<div class="col-md-6 mb-3"><div class="card border-${border} shadow-sm"><div class="card-body">
+                        <h5 class="card-title text-primary">${esc(c.full_name || c.tutee_name)} (@${esc(c.tutee_name)}) ${badge(c.status)}</h5>
+                        ${body}
+                    </div></div></div>`;
         }
 
-        async function loadDashboard() {
-            const res = await fetch('/api/dashboard?t=' + Date.now());
-            const requests = await res.json();
-            const tbody = document.getElementById('dashboard-rows');
-            tbody.innerHTML = '';
+        async function loadTutorHome() {
+            const data = await api('/api/tutor/engagements');
 
-            requests.forEach(r => {
-                const partner = currentUserRole === 'tutor' ? r.tutee_name : r.tutor_name;
-                let badgeClass = 'warning';
-                if (r.status === 'accepted') badgeClass = 'success';
-                else if (r.status === 'declined' || r.status === 'terminated') badgeClass = 'danger';
+            $('tutor-offers-wrap').classList.toggle('d-none', data.offers.length === 0);
+            $('tutor-offers').innerHTML = data.offers.map(o => tutorCard(o, `
+                <p class="text-muted small">${fmtScore(o.match_score)} &middot; Budget: $${esc(o.budget)}/hr</p>
+                ${detailLines(o)}
+                <button class="btn btn-success btn-sm me-1" onclick="respondHire(${o.id}, 'accepted')"><i class="bi bi-check-lg me-1"></i>Accept</button>
+                <button class="btn btn-danger btn-sm" onclick="respondHire(${o.id}, 'declined')"><i class="bi bi-x-lg me-1"></i>Decline</button>`, 'warning')).join('');
 
-                let statusBadge = `<span class="badge bg-${badgeClass}">${r.status}</span>`;
-                let actionBtn = `<span class="text-muted">None</span>`;
+            $('tutor-clients-list').innerHTML = data.active.length ? data.active.map(c => tutorCard(c, `
+                ${detailLines(c)}
+                ${chatButton(c, c.tutee_name)}${terminationControls(c)}`)).join('')
+                : '<div class="col-12"><p class="text-muted">No active engagements at this moment.</p></div>';
 
-                // Restored Accept / Decline buttons for tutors on pending requests
-                if (currentUserRole === 'tutor' && r.status === 'pending') {
-                    actionBtn = `
-                        <button class="btn btn-sm btn-success me-1" onclick="respondHire(${r.id}, 'accepted')">Accept</button>
-                        <button class="btn btn-sm btn-danger" onclick="respondHire(${r.id}, 'declined')">Decline</button>
-                    `;
-                }
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${partner}</td>
-                        <td>${r.subject || 'N/A'}</td>
-                        <td>${statusBadge}</td>
-                        <td>${actionBtn}</td>
-                    </tr>
-                `;
-            });
+            $('tutor-finished').innerHTML = data.finished.length ? data.finished.map(c => tutorCard(c, `
+                <p class="card-text mb-1"><strong>Subject:</strong> ${esc(c.subject || 'N/A')}</p>
+                <p class="text-muted small mb-2">Finished ${esc(c.completed_at || '')}</p>
+                ${chatButton(c, c.tutee_name, 'View chat history')}`, 'secondary')).join('')
+                : '<div class="col-12"><p class="text-muted">No finished sessions yet.</p></div>';
         }
 
         async function respondHire(reqId, status) {
-            await fetch('/api/hire/respond', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({request_id: reqId, status: status})
-            });
-            await loadDashboard();
-            await loadActivity();
-            await loadContacts();
-            if (currentUserRole === 'tutor') {
-                await loadTutorEngagements();
-            }
+            const data = await api('/api/hire/respond', 'POST', {request_id: reqId, status});
+            alert(data.message || data.error);
+            await refreshAll();
+        }
+
+        // ---------------------------------------------------------------- termination
+        const CONFIRM_TEXT = {
+            request: 'Ask the other party to end this session? It only ends once they confirm.',
+            confirm: 'Confirm ending this session? It will be marked DONE and the chat becomes read-only.',
+            reject: 'Keep this session going?',
+            cancel: 'Withdraw your termination request?',
+        };
+
+        async function terminate(requestId, action) {
+            if (!confirm(CONFIRM_TEXT[action])) return;
+            const data = await api('/api/hire/terminate', 'POST', {request_id: requestId, action});
+            alert(data.message || data.error);
+            await refreshAll();
+        }
+
+        // ---------------------------------------------------------------- dashboard
+        async function loadDashboard() {
+            const requests = await api('/api/dashboard');
+            $('dashboard-rows').innerHTML = requests.map(r => {
+                const partner = currentUserRole === 'tutor' ? r.tutee_name : r.tutor_name;
+                let action = '<span class="text-muted">None</span>';
+                if (r.status === 'pending') {
+                    action = currentUserRole === 'tutor'
+                        ? `<button class="btn btn-sm btn-success me-1" onclick="respondHire(${r.id}, 'accepted')">Accept</button>
+                           <button class="btn btn-sm btn-danger" onclick="respondHire(${r.id}, 'declined')">Decline</button>`
+                        : `<button class="btn btn-sm btn-outline-secondary" onclick="cancelRequest()">Cancel</button>`;
+                } else if (r.status === 'accepted' || r.status === 'termination_pending') {
+                    action = terminationControls(r);
+                } else if (r.status === 'completed') {
+                    action = '<span class="text-muted">Finished</span>';
+                }
+                return `<tr><td>${esc(partner)}</td><td>${esc(r.subject || 'N/A')}</td>
+                        <td>${badge(r.status)}</td><td>${action}</td></tr>`;
+            }).join('');
         }
 
         async function loadNotifications() {
-            const res = await fetch('/api/notifications');
-            const data = await res.json();
-            const list = document.getElementById('notifications-list');
-            list.innerHTML = data.map(n => `<li class="list-group-item"><i class="bi bi-bell-fill text-warning me-2"></i>${n.message} <small class="text-muted float-end">${n.created_at}</small></li>`).join('');
+            const data = await api('/api/notifications');
+            $('notifications-list').innerHTML = data.map(n => `<li class="list-group-item"><i class="bi bi-bell-fill text-warning me-2"></i>${esc(n.message)} <small class="text-muted float-end">${esc(n.created_at)}</small></li>`).join('');
         }
 
         async function loadActivity() {
-            const res = await fetch('/api/activity');
-            const data = await res.json();
-            const list = document.getElementById('activity-list');
-            list.innerHTML = data.map(a => `<li class="list-group-item"><i class="bi bi-clock-history me-2"></i>${a.action} <small class="text-muted float-end">${a.timestamp}</small></li>`).join('');
+            const data = await api('/api/activity');
+            $('activity-list').innerHTML = data.map(a => {
+                const done = /\bDONE\b/.test(a.action) ? '<span class="badge bg-dark ms-2">DONE</span>' : '';
+                return `<li class="list-group-item"><i class="bi bi-clock-history me-2"></i>${esc(a.action)}${done} <small class="text-muted float-end">${esc(a.timestamp)}</small></li>`;
+            }).join('');
         }
 
+        // ---------------------------------------------------------------- chat
         async function loadContacts() {
-            const res = await fetch('/api/chat/contacts?t=' + Date.now());
-            const contacts = await res.json();
-            const container = document.getElementById('chat-contacts');
-            
-            if (contacts.length === 0) {
-                container.innerHTML = '<p class="text-muted small p-2">No active matched contacts available.</p>';
+            const contacts = await api('/api/chat/contacts');
+            const box = $('chat-contacts');
+            if (!contacts.length) {
+                box.innerHTML = '<p class="text-muted small p-2">No sessions yet.</p>';
                 return;
             }
-            
-            container.innerHTML = contacts.map(c => `
-                <button class="list-group-item list-group-item-action ${activeChatUserId === c.id ? 'active' : ''}" onclick="openChat(${c.id}, '${c.username}')">
-                    ${c.username} <span class="badge bg-secondary float-end">${c.role}</span>
-                </button>
-            `).join('');
+            const row = c => `
+                <button class="list-group-item list-group-item-action ${activeChat && activeChat.requestId === c.request_id ? 'active' : ''}"
+                        data-name="${esc(c.username)}" onclick="openChat(${c.request_id}, this.dataset.name)">
+                    ${esc(c.username)} <span class="text-nowrap small opacity-75">#${c.request_id}</span>
+                    <span class="badge ${c.is_active ? 'bg-success' : 'bg-dark'} float-end">${c.is_active ? 'Active' : 'DONE'}</span>
+                </button>`;
+            const active = contacts.filter(c => c.is_active), done = contacts.filter(c => !c.is_active);
+            box.innerHTML =
+                (active.length ? '<div class="small text-muted mt-1 mb-1">Active</div>' + active.map(row).join('') : '') +
+                (done.length ? '<div class="small text-muted mt-3 mb-1">Finished sessions</div>' + done.map(row).join('') : '');
         }
 
-        function openChat(userId, username) {
-            activeChatUserId = userId;
-            document.getElementById('chat-with-header').innerText = `Chat with ${username}`;
+        function openChat(requestId, username) {
+            activeChat = {requestId, username};
             loadContacts();
-            fetchMessages();
+            fetchMessages(true);
         }
 
-        async function fetchMessages() {
-            if (!activeChatUserId) return;
-            const res = await fetch(`/api/messages?other_id=${activeChatUserId}&t=` + Date.now());
-            const msgs = await res.json();
-            const box = document.getElementById('chat-messages');
-            
-            if (msgs.length === 0) {
-                box.innerHTML = '<p class="text-muted text-center mt-5">No previous messages yet. Say hi!</p>';
-                return;
-            }
+        function openChatTab(requestId, username) {
+            bootstrap.Tab.getOrCreateInstance(document.querySelector('[data-bs-target="#tab-chat"]')).show();
+            openChat(requestId, username);
+        }
 
-            box.innerHTML = msgs.map(m => `
+        async function fetchMessages(forceScroll = false) {
+            if (!activeChat) return;
+            const data = await api(`/api/messages?request_id=${activeChat.requestId}`);
+            const live = !!data.is_active;
+            $('chat-with-header').innerHTML = `Chat with ${esc(activeChat.username)} ${data.status ? badge(data.status) : ''}`;
+            $('chat-input').disabled = !live;
+            $('chat-send-btn').disabled = !live;
+            $('chat-input').placeholder = live ? 'Type a message...' : 'Session is DONE - chat is read-only';
+            $('chat-warning').classList.toggle('d-none', live);
+
+            const box = $('chat-messages');
+            const msgs = data.messages || [];
+            const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+            box.innerHTML = msgs.length ? msgs.map(m => `
                 <div class="mb-2 ${m.sender_id === currentUserId ? 'text-end' : 'text-start'}">
                     <span class="d-inline-block p-2 rounded ${m.sender_id === currentUserId ? 'bg-primary text-white' : 'bg-light border'}">
-                        <strong>${m.sender_name}:</strong> ${m.message}
+                        <strong>${esc(m.sender_name)}:</strong> ${esc(m.message)}
                     </span>
-                </div>
-            `).join('');
-            box.scrollTop = box.scrollHeight;
+                </div>`).join('')
+                : '<p class="text-muted text-center mt-5">No messages in this session.</p>';
+            if (forceScroll || atBottom) box.scrollTop = box.scrollHeight;
         }
 
         async function sendMessage() {
-            const msgInput = document.getElementById('chat-input');
-            const text = msgInput.value.trim();
-    
-    if (!text) return;
-    if (!activeChatUserId) {
-        alert('Please select a contact from the list first.');
-        return;
-    }
-
-    const res = await fetch('/api/messages', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            receiver_id: parseInt(activeChatUserId), // Ensure integer type
-            message: text
-        })
-    });
-    
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-        alert(data.error || 'Failed to send message.');
-        return;
-    }
-
-    msgInput.value = '';
-    await fetchMessages();
-}
+            const input = $('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+            if (!activeChat) { alert('Please select a session from the list first.'); return; }
+            const data = await api('/api/messages', 'POST', {request_id: activeChat.requestId, message: text});
+            if (!data.success) { alert(data.error || 'Failed to send message.'); return; }
+            input.value = '';
+            await fetchMessages(true);
+        }
     </script>
 </body>
 </html>
