@@ -1,54 +1,39 @@
 """
-Instant tutor matching.
+Instant tutor matching - rule based, no database access (easy to test).
 
-Two stages:
-  1. HARD FILTERS - a tutor who fails any of these is never offered:
-       subject overlap, schedule overlap, compatible modality,
-       budget within tolerance, reachable if the session must be in-person.
-  2. WEIGHTED SCORE (0-100) among the survivors, highest wins:
-       subject 30 | budget 20 | schedule 15 | location 15 | modality 10 | reliability 10
+Stage 1  HARD FILTERS  - a tutor who fails any of these is never offered:
+    subject   tutor teaches the subject (or its whole parent subject)
+    grade     tutee's grade level is inside the tutor's grade range
+    schedule  at least one shared day with >= 60 minutes of overlapping time, counted only
+              inside the tutor's FREE time (availability minus the time already promised
+              to the tutor's other open tutees, so two tutees never clash)
+    modality  not "online only" vs "in-person only"
+    budget    tutor's rate within 20% above the tutee's budget
+    distance  in-person sessions must be within 25 km
 
-Everything here is pure (no database access) so it can be tested on its own.
+Stage 2  WMCS (Weighted Multi-Criteria Scoring), 0-100, highest wins:
+    subject 25 | grade 15 | budget 15 | schedule 15 | location 10 | modality 10 | reliability 10
+    reliability = 40% how often the tutor says yes + 40% tutee star ratings + 20% recent activity
+Each criterion yields a 0..1 ratio that is multiplied by its weight; the weights add up to 100.
 """
 import math
 import re
 import unicodedata
 from datetime import datetime, timezone
-from difflib import SequenceMatcher
 
-try:
-    from geopy.distance import geodesic
+from catalog import LOCATIONS, COLLEGE, split_subject
 
-    def _km(a, b):
-        return geodesic(a, b).kilometers
-except ImportError:  # geopy not installed: haversine is accurate enough at city scale
-    def _km(a, b):
-        lat1, lon1, lat2, lon2 = map(math.radians, (*a, *b))
-        h = (math.sin((lat2 - lat1) / 2) ** 2
-             + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2)
-        return 2 * 6371.0088 * math.asin(math.sqrt(h))
+WEIGHTS = {"subject": 25, "grade": 15, "budget": 15, "schedule": 15,
+           "location": 10, "modality": 10, "reliability": 10}
+assert sum(WEIGHTS.values()) == 100
 
-WEIGHTS = {"subject": 30, "budget": 20, "schedule": 15,
-           "location": 15, "modality": 10, "reliability": 10}
-
-SUBJECT_MIN_SIMILARITY = 0.80   # below this the subjects are treated as different
-BUDGET_TOLERANCE = 0.20         # tutor may cost up to 20% above the tutee's budget
-MAX_INPERSON_KM = 25.0          # farthest an in-person session may be
-NEAR_KM = 5.0                   # within this distance counts as "same area"
-
-CAVITE_COORDINATES = {
-    'bacoor': (14.4608, 120.9631), 'cavite city': (14.4831, 120.8986),
-    'dasmarinas': (14.3294, 120.9367), 'general trias': (14.3861, 120.8806),
-    'imus': (14.4297, 120.9367), 'tagaytay': (14.1153, 120.9621),
-    'trece martires': (14.2828, 120.8672), 'alfonso': (14.1378, 120.8542),
-    'amadeo': (14.1700, 120.9239), 'carmona': (14.3160, 121.0583),
-    'general emilio aguinaldo': (14.1842, 120.7933), 'indang': (14.1953, 120.8769),
-    'kawit': (14.4442, 120.9025), 'maragondon': (14.2764, 120.7375),
-    'mendez': (14.1297, 120.9078), 'naic': (14.3181, 120.7675),
-    'noveleta': (14.4278, 120.8783), 'rosario': (14.4150, 120.8586),
-    'silang': (14.2289, 120.9744), 'tanza': (14.3589, 120.8528),
-    'ternate': (14.2881, 120.7183),
-}
+BUDGET_TOLERANCE = 0.20     # tutor may cost up to 20% above the tutee's budget
+MAX_INPERSON_KM = 25.0      # farthest an in-person session may be
+NEAR_KM = 5.0               # within this distance counts as "same area"
+MIN_SESSION_MIN = 60        # shortest useful shared time slot
+TARGET_SESSION_MIN = 120    # overlap this long (or the tutee's whole window) scores full marks
+RATING_PRIOR_MEAN = 3.5     # a tutor with no ratings starts here ...
+RATING_PRIOR_WEIGHT = 3     # ... worth this many "virtual" ratings, so 1 vote cannot swing the score
 
 
 # ---------------------------------------------------------------- helpers
@@ -59,32 +44,15 @@ def normalize(text):
     return re.sub(r"\s+", " ", text).strip().lower()
 
 
-def _modality(value):
-    v = normalize(value).replace(" ", "-")
-    if v in ("in-person", "inperson", "face-to-face", "onsite"):
-        return "in-person"
-    return v if v in ("online", "both") else "both"
+_COORDS = {normalize(name): xy for name, xy in LOCATIONS.items()}
 
 
-def _subject_tokens(text):
-    parts = re.split(r"[,/;&+]|\band\b", normalize(text))
-    return [p.strip() for p in parts if p.strip()]
-
-
-def subject_similarity(a, b):
-    """0..1. Handles 'Math' vs 'Mathematics' and multi-subject lists like 'Math, Physics'."""
-    best = 0.0
-    for x in _subject_tokens(a):
-        for y in _subject_tokens(b):
-            if x == y:
-                return 1.0
-            short, long_ = sorted((x, y), key=len)
-            if len(short) >= 3 and (long_.startswith(short) or short in long_.split()):
-                sim = 0.9
-            else:
-                sim = SequenceMatcher(None, x, y).ratio()
-            best = max(best, sim)
-    return best
+def _km(a, b):
+    """Haversine distance in km (accurate enough at city scale)."""
+    lat1, lon1, lat2, lon2 = map(math.radians, (*a, *b))
+    h = (math.sin((lat2 - lat1) / 2) ** 2
+         + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2)
+    return 2 * 6371.0088 * math.asin(math.sqrt(h))
 
 
 def _distance_km(loc_a, loc_b):
@@ -93,8 +61,20 @@ def _distance_km(loc_a, loc_b):
         return None
     if a == b:
         return 0.0
-    ca, cb = CAVITE_COORDINATES.get(a), CAVITE_COORDINATES.get(b)
+    ca, cb = _COORDS.get(a), _COORDS.get(b)
     return _km(ca, cb) if ca and cb else None
+
+
+def _modality(value):
+    v = normalize(value).replace(" ", "-")
+    if v in ("in-person", "inperson", "face-to-face", "onsite"):
+        return "in-person"
+    return v if v in ("online", "both") else "both"
+
+
+def _minutes(hhmm):
+    h, m = str(hhmm).split(":")
+    return int(h) * 60 + int(m)
 
 
 def _recency(last_seen):
@@ -108,84 +88,199 @@ def _recency(last_seen):
     return 1.0 if hours <= 24 else 0.5 if hours <= 24 * 7 else 0.2
 
 
+def _hhmm(minutes):
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def _rating_ratio(total_stars, n):
+    """Smoothed average star rating mapped from 1..5 to 0..1."""
+    avg = (total_stars + RATING_PRIOR_MEAN * RATING_PRIOR_WEIGHT) / (n + RATING_PRIOR_WEIGHT)
+    return (avg - 1) / 4
+
+
+def free_slots(tutor_slots, booked_slots):
+    """
+    Tutor availability minus the time already promised to other tutees.
+    Returns one slot per day / free interval, in the shape schedule_ratio expects.
+    Pieces shorter than MIN_SESSION_MIN are dropped later by schedule_ratio.
+    """
+    booked = {}
+    for b in booked_slots or []:
+        try:
+            interval = (_minutes(b["start"]), _minutes(b["end"]))
+        except (KeyError, ValueError):
+            continue
+        for day in b.get("days", []):
+            booked.setdefault(day, []).append(interval)
+    if not booked:
+        return tutor_slots or []
+
+    free = []
+    for s in tutor_slots or []:
+        s0, s1 = _minutes(s["start"]), _minutes(s["end"])
+        for day in s["days"]:
+            pieces = [(s0, s1)]
+            for b0, b1 in sorted(booked.get(day, [])):
+                cut = []
+                for p0, p1 in pieces:
+                    if b1 <= p0 or b0 >= p1:          # no overlap
+                        cut.append((p0, p1))
+                        continue
+                    if p0 < b0:
+                        cut.append((p0, b0))
+                    if b1 < p1:
+                        cut.append((b1, p1))
+                pieces = cut
+            free += [{"days": [day], "start": _hhmm(a), "end": _hhmm(b)} for a, b in pieces if b > a]
+    return free
+
+
+# ---------------------------------------------------------------- criteria
+def subject_match(wanted, offered):
+    """
+    1.0  tutor teaches exactly this subject / branch
+    0.9  tutee wants a branch (Physics) and the tutor teaches the whole subject (Science)
+    0.8  tutee wants the whole subject and the tutor teaches one branch of it
+    0.0  no match (different subject, or different branches)
+    """
+    wanted_parent, wanted_branch = split_subject(wanted)
+    best = 0.0
+    for o in offered or []:
+        if o == wanted:
+            return 1.0
+        parent, branch = split_subject(o)
+        if parent != wanted_parent:
+            continue
+        if branch is None:
+            best = max(best, 0.9)
+        elif wanted_branch is None:
+            best = max(best, 0.8)
+    return best
+
+
+def grade_ratio(grade, lo, hi):
+    """None if the grade is outside the tutor's range. Specialists (narrow range) score higher."""
+    if not (lo <= grade <= hi):
+        return None
+    span = hi - lo + 1
+    return 1 - 0.5 * (span - 1) / (COLLEGE - 1)
+
+
+def schedule_ratio(tutee_slots, tutor_slots):
+    """
+    A slot is {"days": ["mon", ...], "start": "16:00", "end": "18:00"}.
+    For every day the tutee wants, find the tutor slot with the longest overlap on that day.
+    A day counts when the overlap is >= MIN_SESSION_MIN.  None if no day works.
+    ratio = 0.6 * share of the tutee's days covered + 0.4 * how fully the time window is covered.
+    """
+    best = None
+    for ts in tutee_slots or []:
+        t0, t1 = _minutes(ts["start"]), _minutes(ts["end"])
+        if t1 - t0 < MIN_SESSION_MIN:
+            continue
+        target = min(t1 - t0, TARGET_SESSION_MIN)
+        covered = []
+        for day in ts["days"]:
+            longest = 0
+            for rs in tutor_slots or []:
+                if day in rs["days"]:
+                    overlap = min(t1, _minutes(rs["end"])) - max(t0, _minutes(rs["start"]))
+                    longest = max(longest, overlap)
+            if longest >= MIN_SESSION_MIN:
+                covered.append(min(1.0, longest / target))
+        if covered:
+            ratio = (0.6 * len(covered) / len(ts["days"])
+                     + 0.4 * sum(covered) / len(covered))
+            best = ratio if best is None else max(best, ratio)
+    return best
+
+
 # ---------------------------------------------------------------- scoring
 def score_pair(tutee, tutor):
     """Return (score, breakdown) or None if the tutor fails a hard filter."""
     W = WEIGHTS
 
     # 1. Subject (hard)
-    sim = subject_similarity(tutee.get("subject"), tutor.get("subject"))
-    if sim < SUBJECT_MIN_SIMILARITY:
-        return None
-    subject = W["subject"] * sim
-
-    # 2. Schedule (hard)
-    s1, s2 = normalize(tutee.get("schedule")), normalize(tutor.get("schedule"))
-    if s1 == s2:
-        schedule = W["schedule"]
-    elif "flexible" in (s1, s2):
-        schedule = W["schedule"] * 0.8
-    else:
+    sub = subject_match(tutee.get("subject"), tutor.get("subjects"))
+    if sub <= 0:
         return None
 
-    # 3. Modality (hard)
+    # 2. Grade level (hard)
+    try:
+        grade = int(tutee.get("grade"))
+        g = grade_ratio(grade, int(tutor.get("grade_min")), int(tutor.get("grade_max")))
+    except (TypeError, ValueError):
+        return None
+    if g is None:
+        return None
+
+    # 3. Schedule (hard)
+    sched = schedule_ratio(tutee.get("schedule"), free_slots(tutor.get("schedule"), tutor.get("booked")))
+    if sched is None:
+        return None
+
+    # 4. Modality (hard)
     m1, m2 = _modality(tutee.get("modality")), _modality(tutor.get("modality"))
     if m1 != m2 and "both" not in (m1, m2):
-        return None  # one wants online only, the other in-person only
-    modality = W["modality"] if m1 == m2 else W["modality"] * 0.8
-    must_meet = "in-person" in (m1, m2)  # nobody can do online -> must be physically close
+        return None
+    modality = 1.0 if m1 == m2 else 0.8
+    must_meet = "in-person" in (m1, m2)
 
-    # 4. Budget (hard beyond tolerance)
+    # 5. Budget (hard beyond tolerance)
     try:
         budget = max(float(tutee.get("budget") or 0), 0.0)
         rate = max(float(tutor.get("rate") or 0), 0.0)
     except (TypeError, ValueError):
         return None
     if rate <= budget:
-        budget_pts = W["budget"]
+        budget_ratio = 1.0
     elif budget > 0 and rate <= budget * (1 + BUDGET_TOLERANCE):
-        over = (rate - budget) / (budget * BUDGET_TOLERANCE)   # 0..1
-        budget_pts = W["budget"] * (1 - 0.5 * over)
+        budget_ratio = 1 - 0.5 * (rate - budget) / (budget * BUDGET_TOLERANCE)
     else:
         return None
 
-    # 5. Location
+    # 6. Location (hard only when the session must be in person)
     dist = _distance_km(tutee.get("location"), tutor.get("location"))
     if dist is not None and dist <= NEAR_KM:
-        location = W["location"]
+        location = 1.0
     elif dist is not None and dist <= MAX_INPERSON_KM:
-        location = W["location"] * (1 - 0.7 * (dist - NEAR_KM) / (MAX_INPERSON_KM - NEAR_KM))
+        location = 1 - 0.7 * (dist - NEAR_KM) / (MAX_INPERSON_KM - NEAR_KM)
     elif must_meet:
-        return None  # in-person session but too far (or unknown) -> not workable
+        return None
     else:
         location = 0.0
     if not must_meet:
-        location = max(location, W["location"] * 0.6)  # distance barely matters online
+        location = max(location, 0.6)       # distance barely matters online
 
-    # 6. Reliability: how often this tutor accepts + whether they were recently active
+    # 7. Reliability: how often the tutor says yes + tutee star ratings + recent activity
     accepted = int(tutor.get("accepted_n") or 0)
     ignored = int(tutor.get("declined_n") or 0) + int(tutor.get("expired_n") or 0)
-    accept_rate = (accepted + 2) / (accepted + ignored + 3)   # smoothed; new tutors start at 0.67
-    reliability_ratio = 0.6 * accept_rate + 0.4 * _recency(tutor.get("last_seen"))
-    reliability = W["reliability"] * reliability_ratio
+    accept_rate = (accepted + 2) / (accepted + ignored + 3)      # smoothed; new tutors start ~0.67
+    stars = _rating_ratio(float(tutor.get("rating_sum") or 0), int(tutor.get("rating_n") or 0))
+    reliability = 0.4 * accept_rate + 0.4 * stars + 0.2 * _recency(tutor.get("last_seen"))
 
     breakdown = {
-        "subject": round(subject, 1), "budget": round(budget_pts, 1),
-        "schedule": round(schedule, 1), "location": round(location, 1),
-        "modality": round(modality, 1), "reliability": round(reliability, 1),
+        "subject": W["subject"] * sub, "grade": W["grade"] * g,
+        "budget": W["budget"] * budget_ratio, "schedule": W["schedule"] * sched,
+        "location": W["location"] * location, "modality": W["modality"] * modality,
+        "reliability": W["reliability"] * reliability,
     }
+    breakdown = {k: round(v, 1) for k, v in breakdown.items()}
     return round(sum(breakdown.values()), 1), breakdown
 
 
 def rank_tutors(tutee, tutors):
-    """All eligible tutors, best first. Ties: reliability, then cheaper, then id."""
+    """All eligible tutors, best first. Ties: emptier schedule, reliability, cheaper, id."""
     ranked = []
     for tutor in tutors:
         result = score_pair(tutee, tutor)
         if result:
-            score, breakdown = result
-            ranked.append((tutor, score, breakdown))
-    ranked.sort(key=lambda r: (-r[1], -r[2]["reliability"],
+            ranked.append((tutor, *result))
+
+    def load(t):
+        return int(t.get("open_n") or 0) / max(int(t.get("max_tutees") or 1), 1)
+
+    ranked.sort(key=lambda r: (-r[1], load(r[0]), -r[2]["reliability"],
                                float(r[0].get("rate") or 0), r[0].get("user_id", 0)))
     return ranked
 
