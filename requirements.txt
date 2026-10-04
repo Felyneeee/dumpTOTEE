@@ -1,5 +1,1 @@
-Flask
-werkzeug
-scipy
-numpy
-geopy
+Flask>=3.0
